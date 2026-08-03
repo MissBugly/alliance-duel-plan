@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Survival Battle × Alliance Duel — Optimal Windows Planner</title>
+<style>
+  :root{
+    --bg:#0f1826; --panel:#16223a; --panel2:#1c2b47; --line:#2b3d5f;
+    --ink:#eaf1fb; --muted:#9fb2ce; --gold:#ffcf3f; --goldsoft:#3a3210;
+    --build:#d3792a; --train:#3aa06a; --research:#3d8bd6; --raven:#9a6ff0; --heroes:#e0577f; --combat:#e0503f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0d1420,#0f1826 40%);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.5;}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px;}
+  .credit{font-size:13px;color:var(--muted);letter-spacing:.3px;}
+  .credit b{color:var(--gold);}
+  .credit.top{margin:0 0 10px;font-size:13px;letter-spacing:.4px;}
+  .credit.bottom{margin:28px 0 0;text-align:center;border-top:1px solid var(--line);padding-top:18px;font-size:13px;}
+  h1{font-size:26px;margin:0 0 6px;letter-spacing:.2px;}
+  h1 .sub{color:var(--gold);}
+  .lead{color:var(--muted);max-width:840px;margin:0 0 22px;font-size:15px;}
+  .principle{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--gold);
+    border-radius:12px;padding:14px 18px;margin:0 0 22px;font-size:14.5px;}
+  .principle b{color:var(--gold);}
+
+  /* Best at a glance */
+  .best{background:linear-gradient(180deg,#1d1a0e,#161d31);border:1px solid #5a4d18;border-radius:14px;
+    padding:16px 18px;margin:0 0 24px;}
+  .best h2{font-size:15px;margin:0 0 12px;color:var(--gold);letter-spacing:.3px;text-transform:uppercase;}
+  .bestgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+  .bchip{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 13px;position:relative;overflow:hidden;}
+  .bchip .day{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .bchip .th{font-weight:700;font-size:14.5px;margin:2px 0 5px;}
+  .bchip .tm{font-size:19px;font-weight:800;color:var(--gold);letter-spacing:.4px;}
+  .bchip .act{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .bchip .bar{position:absolute;left:0;top:0;bottom:0;width:4px;}
+  .bchip.combat .tm{color:#ff9b8a;font-size:15px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 20px;margin:0 0 22px;}
+  .card h2{font-size:17px;margin:0 0 4px;}
+  .card .hint{color:var(--muted);font-size:13px;margin:0 0 14px;}
+
+  .controls{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:center;margin:0 0 16px;font-size:13.5px;color:var(--muted);}
+  .controls label{display:flex;gap:7px;align-items:center;cursor:pointer;}
+  .controls select,.controls input{background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:5px 8px;font-size:13px;}
+  #tznote{font-size:12.5px;color:var(--gold);}
+  .clocks{display:flex;flex-wrap:wrap;gap:8px 22px;margin:0 0 6px;}
+  .liveclock{font-size:13.5px;color:var(--muted);}
+  .liveclock b{color:#7dffd8;font-variant-numeric:tabular-nums;font-size:15px;letter-spacing:.5px;}
+  .liveclock b.you{color:var(--gold);}
+  .tzhint{font-size:12px;color:var(--muted);margin:-4px 0 14px;max-width:820px;}
+  .tzhint b{color:var(--ink);}
+  .nowbanner{margin:2px 0 14px;padding:11px 14px;border-radius:10px;font-size:13.5px;
+    background:#0e2a24;border:1px solid #1f6b57;color:#d7fff2;}
+  .nowbanner b{color:#7dffd8;}
+  .nowbanner.golden{background:#2c2610;border-color:#6a5a17;color:#fff3d0;}
+  .nowbanner.golden b{color:var(--gold);}
+  .nowbanner .lt{color:#9fb2ce;}
+  tbody th .loc{display:block;font-size:11px;color:#7f93b2;font-weight:500;}
+  td.now{outline:3px solid #34e0c0 !important;outline-offset:-1px;z-index:3;}
+  td.now .now-tag{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+    background:#34e0c0;color:#062b24;font-size:9px;font-weight:800;letter-spacing:.5px;
+    padding:2px 7px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.5);}
+  tr.nowrow th{color:#7dffd8;}
+
+  .gridscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{border-collapse:separate;border-spacing:5px;width:100%;min-width:720px;}
+  th,td{text-align:center;}
+  thead th{font-size:13px;color:var(--muted);font-weight:600;padding:4px 2px;}
+  thead th.dhead{color:var(--ink);}
+  thead th .ad{display:block;font-size:11px;font-weight:600;margin-top:2px;}
+  tbody th{color:var(--muted);font-size:13px;font-weight:600;white-space:nowrap;padding-right:4px;text-align:right;}
+  td.cell{border-radius:10px;padding:8px 4px;min-width:90px;height:58px;vertical-align:middle;
+    border:1px solid rgba(255,255,255,.06);position:relative;transition:transform .1s;}
+  td.cell .ic{font-size:16px;line-height:1;display:block;margin-bottom:3px;}
+  td.cell .lb{font-size:11.5px;font-weight:600;color:#fff;display:block;}
+  .build{background:var(--build);}  .train{background:var(--train);}
+  .research{background:var(--research);} .raven{background:var(--raven);} .heroes{background:var(--heroes);}
+
+  /* GOLDEN — strong highlight */
+  td.gold{outline:3px solid var(--gold);outline-offset:-1px;transform:scale(1.04);z-index:2;
+    box-shadow:0 0 0 3px rgba(255,207,63,.30), 0 8px 22px rgba(255,207,63,.40);
+    animation:pulse 2.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(255,207,63,.30),0 8px 22px rgba(255,207,63,.35);}
+    50%{box-shadow:0 0 0 5px rgba(255,207,63,.45),0 10px 28px rgba(255,207,63,.55);}}
+  td.gold .best-tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    background:var(--gold);color:#3a2c00;font-size:9px;font-weight:800;letter-spacing:.5px;
+    padding:2px 7px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.5);}
+  td.gold .lb{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);}
+  body.onlygold td.cell:not(.gold){opacity:.16;filter:saturate(.4);transform:none;}
+  body.onlygold td.gold{animation:none;}
+  .dimcol{opacity:.45;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin:16px 0 2px;font-size:12.5px;color:var(--muted);}
+  .legend .k{display:flex;gap:6px;align-items:center;}
+  .legend .sw{width:14px;height:14px;border-radius:4px;display:inline-block;}
+  .legend .star{color:var(--gold);font-size:14px;}
+
+  .days{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+  .day.hasbest{border-color:#5a4d18;}
+  .day .top{padding:12px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
+  .day .top .num{font-size:12px;color:var(--muted);}
+  .day .top .theme{font-weight:700;font-size:15px;}
+  .day .top .chip{margin-left:auto;font-size:11px;padding:3px 9px;border-radius:999px;color:#fff;font-weight:600;}
+  .day .body{padding:13px 15px 16px;}
+  .goldwin{background:linear-gradient(180deg,#332b0e,#241f0b);border:1.5px solid var(--gold);border-radius:10px;
+    padding:11px 13px;margin:0 0 12px;font-size:13px;box-shadow:0 4px 14px rgba(255,207,63,.15);}
+  .goldwin .hd{display:flex;align-items:center;gap:7px;color:var(--gold);font-weight:800;font-size:12px;
+    text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+  .goldwin .bigtime{font-size:22px;font-weight:800;color:var(--gold);letter-spacing:.5px;}
+  .goldwin .forwhat{color:var(--muted);font-size:12.5px;margin-top:2px;}
+  .goldwin.combat{background:linear-gradient(180deg,#3a1f1a,#241413);border-color:var(--combat);box-shadow:none;}
+  .goldwin.combat .hd,.goldwin.combat .bigtime{color:#ff9b8a;}
+  .acts{margin:0;padding:0;list-style:none;font-size:13px;}
+  .acts li{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed #24344f;}
+  .acts li:last-child{border-bottom:0;}
+  .acts .pt{color:#8fe3ab;font-weight:600;white-space:nowrap;}
+  .acts .pt.small{color:var(--muted);font-weight:500;}
+  .tip{margin-top:12px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;}
+  .tip b{color:var(--ink);}
+  @media(max-width:560px){ h1{font-size:22px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="credit top">credits <b>MissBugly</b> 💕🌷 - ONI alliance - Server 249</div>
+  <h1>Survival Battle × <span class="sub">Alliance Duel</span></h1>
+  <p class="lead">Cross-event planner to see <b>which day and hour</b> to run each operation. Cells marked with a star ★ are the
+  <b>double-scoring windows</b>: acting then earns points in both the Alliance Duel and the Survival Battle at the same time.</p>
+
+  <div class="principle">
+    🎯 <b>Guiding rule — Alliance Duel leads.</b> Its points dwarf everything else (a UR Caravan = 210,000, a Lv.7 Raven Gear
+    chest = 1,620,000), so <b>the Alliance Duel theme decides the day</b>. Within that day, the Survival Battle rotation tells you the
+    <b>4-hour window</b> to spend in and also bank Battle points and ranking. Golden rule: <b>stockpile resources and release them only in the ★ window</b>.
+  </div>
+
+  <!-- Best at a glance -->
+  <div class="best">
+    <h2>★ Best day &amp; time at a glance</h2>
+    <div class="bestgrid" id="bestgrid"></div>
+  </div>
+
+  <!-- GRID -->
+  <div class="card">
+    <h2>Hourly grid (7 days × 4-hour windows)</h2>
+    <p class="hint">Each column is a day; the Alliance Duel theme is under the day number. Cell color = the active Survival Battle activity.</p>
+
+    <div class="controls">
+      <label><b>👉 Select your timezone:</b>
+        <select id="youutc"></select>
+      </label>
+      <label>Today is:
+        <select id="curday"></select>
+      </label>
+      <label><input type="checkbox" id="ogl"> Show only ★ windows</label>
+    </div>
+    <div class="clocks">
+      <span class="liveclock">🕒 Server time (UTC−2): <b id="liveclock">--:--:--</b></span>
+      <span class="liveclock">📍 Your time now: <b id="youclock" class="you">--:--:--</b></span>
+    </div>
+    <p class="tzhint">Just pick <b>your timezone</b> above — next to every window you'll see exactly when it happens <b>in your local time</b>. The server clock (Server 249, UTC−2) is fixed and runs live; you never need to set it.</p>
+    <div id="nowbanner" class="nowbanner"></div>
+
+    <div class="gridscroll">
+      <table id="grid">
+        <thead><tr id="hrow"></tr></thead>
+        <tbody id="brows"></tbody>
+      </table>
+    </div>
+
+    <div class="legend">
+      <span class="k"><span class="sw build"></span> Build (Build Territory)</span>
+      <span class="k"><span class="sw train"></span> Train (Train Soldiers)</span>
+      <span class="k"><span class="sw research"></span> Research (Technology Research)</span>
+      <span class="k"><span class="sw raven"></span> Raven (Enhance Raven)</span>
+      <span class="k"><span class="sw heroes"></span> Heroes (Enhance Heroes)</span>
+      <span class="k"><span class="star">★</span> Double-scoring window</span>
+    </div>
+  </div>
+
+  <!-- DAY PANELS -->
+  <div class="card">
+    <h2>What to do, day by day</h2>
+    <p class="hint">For each day: the Alliance Duel theme (with the highest-value actions), the ★ window to focus your push, and what to hold back.</p>
+    <div class="days" id="days"></div>
+  </div>
+
+  <div class="credit bottom">credits <b>MissBugly</b> 💕🌷 - ONI alliance - Server 249</div>
+
+</div>
+
+<script>
+const ACT = {
+  build:   {lb:"Build",    ic:"🏗️", cls:"build",    color:"var(--build)"},
+  train:   {lb:"Train",    ic:"⚔️", cls:"train",    color:"var(--train)"},
+  research:{lb:"Research", ic:"🔬", cls:"research", color:"var(--research)"},
+  raven:   {lb:"Raven",    ic:"🦅", cls:"raven",    color:"var(--raven)"},
+  heroes:  {lb:"Heroes",   ic:"🛡️", cls:"heroes",   color:"var(--heroes)"},
+};
+const HOURS = [0,4,8,12,16,20]; // server hours
+
+const SB = {
+  1:["build","build","train","research","raven","heroes"],
+  2:["heroes","heroes","build","train","research","raven"],
+  3:["build","build","train","research","raven","heroes"],
+  4:["train","train","research","raven","heroes","build"],
+  5:["research","research","raven","heroes","build","train"],
+  6:["raven","raven","heroes","build","train","research"],
+  7:["heroes","heroes","build","train","research","raven"],
+};
+
+const AD = {
+  1:{theme:"Raven / Falcon", match:"raven", chip:"var(--raven)",
+     acts:[["Complete Falcon Quest (1)","+23,000"],["Consume 1 Raven Essence","+5,000"],["Consume 1 Stamina","+300"],
+           ["Consume 1 Raven Fruit","+6"],["Gather Grain/Timber (100)","+10",1],["Gather Herbs (60)","+10",1],["Use 660 Antitoxin","+2",1]],
+     tip:"Hold your <b>Raven Essence, Raven Fruit and Falcon Quest completions</b> for the ★ window. Gathering and stamina can be spent any time that day."},
+  2:{theme:"Construction", match:"build", chip:"var(--build)",
+     acts:[["Dispatch UR Caravan","+210,000"],["Execute 1 UR Covert Operation","+157,500"],["Recruit survivor (1)","+3,150"],
+           ["Use 1m Construction Speedup","+115"],["Increase 1 Building Might","+23"],["Buy pack (1 Diamond)","+30",1]],
+     tip:"Stockpile <b>construction speedups</b> and time building upgrades to finish inside the ★ window. <b>Caravan and Covert Op</b> give the biggest points — do them any time (Alliance Duel only)."},
+  3:{theme:"Research", match:"research", chip:"var(--research)",
+     acts:[["Open Lv.7 Raven Gear chest (ea.)","+1,620,000"],["Open Lv.6 Raven Gear chest (ea.)","+540,000"],["Open Lv.5 Raven Gear chest (ea.)","+180,000"],
+           ["Complete Falcon Quest (1)","+23,000"],["Consume 1 Study Scroll","+600"],["Use 1m Research Speedup","+115"],["Increase 1 Tech Might","+23"]],
+     tip:"Hold <b>research speedups and Study Scrolls</b> for the ★ window. <b>Raven Gear chests</b> are worth huge points here — open them around 16:00 so they also land in the Survival Battle Raven window (double dip)."},
+  4:{theme:"Heroes", match:"heroes", chip:"var(--heroes)", inferred:true,
+     acts:[["Hero enhancement (inferred)","—",1]],
+     tip:"Day theme inferred (screenshot missing) — Heroes is the only Survival Battle activity left free. Hold hero EXP/materials for the ★ window and confirm the theme in-game."},
+  5:{theme:"Training", match:"train", chip:"var(--train)",
+     acts:[["Train 1 Lv.10 soldier (ea.)","+253"],["Train 1 Lv.9 soldier (ea.)","+230"],["Use 1m Training Boost","+115"],
+           ["Complete Falcon Quest (1)","+23,000"],["Increase Building/Tech Might","+23"],["Use Constr./Research Speedup","+115",1]],
+     tip:"All-round day, but per-soldier points reward <b>training</b>: stockpile <b>Training Boost</b> and queued soldiers for the ★ window. Higher soldier level = more points."},
+  6:{theme:"Combat", match:null, chip:"var(--combat)", combat:true,
+     acts:[["Execute 1 UR Covert Operation","+157,500"],["Kill Lv.10 soldier (specific match)","+126.5"],["Use any 1m Speedup","+115"],
+           ["Kill Lv.10 soldier (general)","+126.5"],["Kill Lv.1 soldier (specific match)","+23",1]],
+     tip:"This is <b>battle day</b>: points come from <b>killing enemy troops</b> (Alliance Duel only — the Survival Battle has no combat window). Coordinate attacks with your alliance. Leftover speedups: burn them in the matching SB windows (Build 12:00, Train 16:00, Research 20:00 server)."},
+};
+const AD_DAYS = 6;
+
+// ---- server UTC offsets (minutes) ----
+const UTC = [-720,-660,-600,-570,-540,-480,-420,-360,-300,-240,-210,-180,-120,-60,0,60,120,180,210,240,270,300,330,345,360,390,420,480,510,540,570,600,630,660,720,765,780,840];
+function utcLabel(m){ const s=m<0?"−":"+"; const a=Math.abs(m);
+  return "UTC"+s+String(Math.floor(a/60)).padStart(2,"0")+":"+String(a%60).padStart(2,"0"); }
+function fillUTC(sel, def){
+  let hasDef=UTC.includes(def);
+  UTC.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=utcLabel(m);
+    if(m===(hasDef?def:0))o.selected=true; sel.appendChild(o); });
+}
+function fillDays(sel){
+  for(let i=1;i<=7;i++){ const o=document.createElement("option"); o.value=i; o.textContent="Day "+i;
+    if(i===1)o.selected=true; sel.appendChild(o); }
+}
+const SERVER_UTC = -120;                                                               // Server 249 = UTC−2 (fixed)
+function serverOffset(){ return SERVER_UTC; }                                          // minutes
+function youOffset(){ return (+document.getElementById("youutc").value); }             // minutes (viewer's chosen UTC offset)
+function deviceOffset(){ return -(new Date().getTimezoneOffset()); }                   // minutes (device's UTC offset, for the default)
+function delta(){ return youOffset() - serverOffset(); }                               // your local vs server, minutes
+function utcNowSec(){ const n=new Date(); return n.getUTCHours()*3600 + n.getUTCMinutes()*60 + n.getUTCSeconds(); }
+function serverNowSec(){ return ((utcNowSec() + serverOffset()*60)%86400 + 86400)%86400; }  // live server time-of-day
+function youNowSec(){ return ((utcNowSec() + youOffset()*60)%86400 + 86400)%86400; }        // live viewer time-of-day
+function fmtMin(mins){ mins=((mins%1440)+1440)%1440; return String(Math.floor(mins/60)).padStart(2,"0")+":"+String(mins%60).padStart(2,"0"); }
+function fmtSec(sec){ sec=((sec%86400)+86400)%86400;
+  return String(Math.floor(sec/3600)).padStart(2,"0")+":"+String(Math.floor(sec%3600/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0"); }
+// server window string, optionally with the viewer's local equivalent
+function windowStr(startHourServer, d){
+  const s=startHourServer*60; const srv=fmtMin(s)+"–"+fmtMin(s+240);
+  if(d===0) return srv;
+  return srv+' <span class="lt">(you '+fmtMin(s+d)+"–"+fmtMin(s+d+240)+")</span>";
+}
+function nowWinIndex(){ return Math.floor(serverNowSec()/60/240); } // 0..5 → 00,04,08,12,16,20
+
+// ---- grid ----
+function buildGrid(d){
+  const hrow=document.getElementById("hrow"), brows=document.getElementById("brows");
+  hrow.innerHTML="<th></th>";
+  for(let day=1; day<=7; day++){
+    const ad=AD[day]; const th=document.createElement("th");
+    th.className="dhead"+(day>AD_DAYS?" dimcol":"");
+    const adlabel = day>AD_DAYS ? '<span class="ad" style="color:var(--muted)">Battle only</span>'
+      : `<span class="ad" style="color:${ad.chip}">AD: ${ad.theme}${ad.inferred?' *':''}</span>`;
+    th.innerHTML=`Day ${day}${adlabel}`; hrow.appendChild(th);
+  }
+  brows.innerHTML="";
+  const nowIdx=nowWinIndex(); const nowDay=+document.getElementById("curday").value;
+  for(let hi=0; hi<HOURS.length; hi++){
+    const tr=document.createElement("tr");
+    if(hi===nowIdx) tr.className="nowrow";
+    const rl=document.createElement("th");
+    rl.innerHTML = fmtMin(HOURS[hi]*60) + (d!==0? '<span class="loc">you '+fmtMin(HOURS[hi]*60+d)+'</span>' : '');
+    tr.appendChild(rl);
+    for(let day=1; day<=7; day++){
+      const act=SB[day][hi]; const a=ACT[act]; const td=document.createElement("td");
+      td.className="cell "+a.cls+(day>AD_DAYS?" dimcol":"");
+      const ad=AD[day];
+      let tag="";
+      if(day<=AD_DAYS && ad.match===act){ td.classList.add("gold"); tag='<span class="best-tag">★ BEST</span>'; }
+      if(hi===nowIdx && day===nowDay){ td.classList.add("now"); tag+='<span class="now-tag">◉ NOW</span>'; }
+      td.innerHTML=`${tag}<span class="ic">${a.ic}</span><span class="lb">${a.lb}</span>`;
+      tr.appendChild(td);
+    }
+    brows.appendChild(tr);
+  }
+}
+
+// ---- best-at-a-glance ----
+function buildBest(d){
+  const wrap=document.getElementById("bestgrid"); wrap.innerHTML="";
+  for(let day=1; day<=AD_DAYS; day++){
+    const ad=AD[day]; const el=document.createElement("div");
+    if(ad.combat){
+      el.className="bchip combat";
+      el.innerHTML=`<span class="bar" style="background:var(--combat)"></span>
+        <div class="day">Day ${day}</div><div class="th">${ad.theme}</div>
+        <div class="tm">All day ⚔️</div><div class="act">Coordinated attacks — kill troops</div>`;
+    }else{
+      const start=SB[day].indexOf(ad.match);
+      el.className="bchip";
+      el.innerHTML=`<span class="bar" style="background:${ad.chip}"></span>
+        <div class="day">Day ${day}${ad.inferred?' *':''}</div><div class="th">${ad.theme}</div>
+        <div class="tm">${windowStr(HOURS[start],d)}</div><div class="act">Battle activity: ${ACT[ad.match].lb}</div>`;
+    }
+    wrap.appendChild(el);
+  }
+}
+
+// ---- day panels ----
+function buildDays(d){
+  const wrap=document.getElementById("days"); wrap.innerHTML="";
+  for(let day=1; day<=AD_DAYS; day++){
+    const ad=AD[day]; const el=document.createElement("div");
+    el.className="day"+(ad.combat?"":" hasbest");
+    const actsHtml=ad.acts.map(a=>`<li><span>${a[0]}</span><span class="pt${a[2]?' small':''}">${a[1]}</span></li>`).join("");
+    let gold;
+    if(ad.combat){
+      gold=`<div class="goldwin combat"><div class="hd">⚔️ Battle day — no ★ window</div>
+        <div class="bigtime">All day</div><div class="forwhat">Focus coordinated attacks; killing troops scores (Alliance Duel only)</div></div>`;
+    }else{
+      const start=SB[day].indexOf(ad.match);
+      gold=`<div class="goldwin"><div class="hd">★ Best window</div>
+        <div class="bigtime">${windowStr(HOURS[start],d)}</div>
+        <div class="forwhat">Survival Battle activity: <b>${ACT[ad.match].lb}</b></div></div>`;
+    }
+    el.innerHTML=`
+      <div class="top"><div><div class="num">Day ${day}</div><div class="theme">${ad.theme}</div></div>
+        <span class="chip" style="background:${ad.chip}">Alliance Duel${ad.inferred?' *':''}</span></div>
+      <div class="body">${gold}<ul class="acts">${actsHtml}</ul>
+        <div class="tip">💡 ${ad.tip}</div></div>`;
+    wrap.appendChild(el);
+  }
+}
+
+function updateNowBanner(d){
+  const el=document.getElementById("nowbanner");
+  const idx=nowWinIndex(); const day=+document.getElementById("curday").value;
+  const srv=fmtMin(Math.floor(serverNowSec()/60));
+  const act=SB[day][idx]; const a=ACT[act]; const ad=AD[day];
+  const winSrv=fmtMin(HOURS[idx]*60)+"–"+fmtMin(HOURS[idx]*60+240);
+  const isGold = day<=AD_DAYS && ad.match===act;
+  const localTxt = d!==0 ? ` <span class="lt">(your time: ${fmtMin(HOURS[idx]*60+d)}–${fmtMin(HOURS[idx]*60+240+d)})</span>` : "";
+  const theme = day<=AD_DAYS ? ad.theme : "Battle only (Alliance Duel finished)";
+  let msg;
+  if(isGold){
+    el.className="nowbanner golden";
+    msg=`◉ <b>NOW — server ${srv}</b> · Day ${day} (${theme}). Window <b>${winSrv}</b>${localTxt} → activity <b>${a.lb}</b>. ★ <b>This is a DOUBLE-SCORING window — push now.</b>`;
+  }else{
+    el.className="nowbanner";
+    // find next golden window for this day
+    let nxt="";
+    if(day<=AD_DAYS && ad.match){
+      const gi=SB[day].indexOf(ad.match);
+      nxt=` Next ★ window today: <b>${fmtMin(HOURS[gi]*60)}–${fmtMin(HOURS[gi]*60+240)}</b> (${ACT[ad.match].lb}).`;
+    }else if(ad.combat){ nxt=" Battle day — coordinate attacks all day."; }
+    msg=`◉ <b>NOW — server ${srv}</b> · Day ${day} (${theme}). Window <b>${winSrv}</b>${localTxt} → activity <b>${a.lb}</b>.${nxt}`;
+  }
+  el.innerHTML=msg;
+}
+function updateClocks(){
+  document.getElementById("liveclock").textContent = fmtSec(serverNowSec());
+  document.getElementById("youclock").textContent = fmtSec(youNowSec());
+}
+function refresh(){
+  const d=delta();
+  buildGrid(d); buildBest(d); buildDays(d); updateNowBanner(d); updateClocks();
+}
+
+fillUTC(document.getElementById("youutc"), deviceOffset()); // default to the viewer's own device timezone
+fillDays(document.getElementById("curday"));
+["youutc","curday"].forEach(id=>document.getElementById(id).addEventListener("change", refresh));
+document.getElementById("ogl").addEventListener("change", e=>document.body.classList.toggle("onlygold", e.target.checked));
+
+// live clocks: tick every second; rebuild grid/banner only when the server minute changes
+let lastMin="";
+function tick(){
+  updateClocks();
+  const key=fmtMin(Math.floor(serverNowSec()/60));
+  if(key!==lastMin){ lastMin=key; refresh(); }
+}
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
